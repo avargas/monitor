@@ -177,6 +177,41 @@ function get_ps () {
 	}
 
 	return $ps;
-
 }
 
+function get_mysql ($host, $user, $pass)
+{
+	$mysql = mysql_connect($host, $user, $pass);
+
+	if (!$mysql) {
+		echo "failed to connect to mysql\n";
+		return;
+	}
+
+	$stats = array();
+
+	$plQuery = mysql_query('show global status');
+	$map = array(
+		'Uptime'=>'uptime',
+		'Threads_connected'=>'connections',
+		'Threads_running'=>'running_connections',
+		'Queries'=>'total_queries',
+		'Connections'=>'total_connections',
+		'Bytes_received'=>'bytes_in',
+		'Bytes_sent'=>'bytes_out'
+	);
+	while (($row = mysql_fetch_assoc($plQuery)) !== false) {
+		if (!isset($map[$row['Variable_name']])) {
+			continue;
+		}
+		
+		$stats[$map[$row['Variable_name']]] = $row['Value'];
+	}
+	
+	$stats['bps_in'] = $stats['bytes_in'] / $stats['uptime'];
+	$stats['bps_out'] = $stats['bytes_out'] / $stats['uptime'];
+	$stats['bps'] = ($stats['bytes_in'] + $stats['bytes_out']) / $stats['uptime'];
+	mysql_close();
+	
+	return $stats;
+}
